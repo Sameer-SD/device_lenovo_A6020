@@ -33,8 +33,8 @@
 #include <stdio.h>
 
 #include <android-base/properties.h>
+#include <android-base/logging.h>
 #include "property_service.h"
-#include "vendor_init.h"
 
 using android::base::GetProperty;
 using android::init::property_set;
@@ -42,6 +42,9 @@ using android::init::property_set;
 #define ISMATCH(a,b)    (!strncmp(a,b,PROP_VALUE_MAX))
 
 #define CMDLINE_SIZE 1024
+
+namespace android {
+namespace init {
 
 void property_override(char const prop[], char const value[])
 {
@@ -72,6 +75,8 @@ void vendor_load_properties()
     char panel_id[32];
     FILE *fp;
     platform = GetProperty("ro.board.platform", "");
+
+    LOG(INFO) << __func__ << "\n";
 
     if (platform != ANDROID_TARGET) {
         return;
@@ -187,4 +192,7 @@ void set_model_config(bool plus){
         property_set("dalvik.vm.heapmaxfree", "8m");
     }
 }
+
+}  // namespace init
+}  // namespace android
 
