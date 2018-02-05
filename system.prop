@@ -106,6 +106,7 @@ rild.libargs=-d /dev/smd0
 ril.subscription.types=NV,RUIM
 ro.telephony.call_ring.multiple=false
 telephony.lteOnCdmaDevice=0
+persist.radio.aosp_usr_pref_sel=true
 
 # SDcardFS
 ro.sys.sdcardfs=false
