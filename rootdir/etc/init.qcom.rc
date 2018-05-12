@@ -189,6 +189,13 @@ on post-fs-data
 
     mkdir /data/misc/ipa 0700 net_admin net_admin
 
+    mkdir /data/misc/perfd 0770 root system
+    chmod 2770 /data/misc/perfd
+    mkdir /data/misc/perfd 0755 root system
+    chmod 2755 /data/misc/perfd
+    mkdir /data/system/perfd 0770 root system
+    chmod 2770 /data/system/perfd
+
     mkdir /data/misc/bluetooth 0770 bluetooth bluetooth
 
     # Create the directories used by the Wireless subsystem
@@ -332,6 +339,9 @@ on enable-low-power
     write /dev/cpuset/system-background/cpus 4-6
     write /dev/cpuset/top-app/cpus 0-7
     write /dev/cpuset/camera-daemon/cpus 4-7
+
+    rm /data/system/perfd/default_values
+    start perfd
 
     setprop ro.min_freq_0 400000
     setprop ro.min_freq_4 800000
@@ -521,6 +531,13 @@ service qcom-sh /system/bin/sh /system/etc/init.qcom.sh
     group root
     disabled
     oneshot
+
+service perfd /system/vendor/bin/perfd
+   class main
+   user root
+   group root readproc system
+   disabled
+   writepid /dev/cpuset/system-background/tasks
 
 service qcom-post-boot /system/vendor/bin/init.qcom.post_boot.sh
     class late_start
