@@ -84,7 +84,7 @@ case "$target" in
             echo "20000 800000:50000" > /sys/devices/system/cpu/cpu0/cpufreq/interactive/above_hispeed_delay
             echo 95 > /sys/devices/system/cpu/cpu0/cpufreq/interactive/go_hispeed_load
             echo 20000 > /sys/devices/system/cpu/cpu0/cpufreq/interactive/timer_rate
-            echo 800000 > /sys/devices/system/cpu/cpu0/cpufreq/interactive/hispeed_freq
+            echo 960000 > /sys/devices/system/cpu/cpu0/cpufreq/interactive/hispeed_freq
             echo 0 > /sys/devices/system/cpu/cpu0/cpufreq/interactive/io_is_busy
             echo "75 960000:85 1113600:95" > /sys/devices/system/cpu/cpu0/cpufreq/interactive/target_loads
             echo 50000 > /sys/devices/system/cpu/cpu0/cpufreq/interactive/min_sample_time
@@ -191,7 +191,7 @@ case "$target" in
             echo "19000 800000:39000" > /sys/devices/system/cpu/cpu0/cpufreq/interactive/above_hispeed_delay
             echo 95 > /sys/devices/system/cpu/cpu0/cpufreq/interactive/go_hispeed_load
             echo 20000 > /sys/devices/system/cpu/cpu0/cpufreq/interactive/timer_rate
-            echo 800000 > /sys/devices/system/cpu/cpu0/cpufreq/interactive/hispeed_freq
+            echo 960000 > /sys/devices/system/cpu/cpu0/cpufreq/interactive/hispeed_freq
             echo 0 > /sys/devices/system/cpu/cpu0/cpufreq/interactive/io_is_busy
             echo "75 960000:85 1113600:90 1344000:80" > /sys/devices/system/cpu/cpu0/cpufreq/interactive/target_loads
             echo 40000 > /sys/devices/system/cpu/cpu0/cpufreq/interactive/min_sample_time
