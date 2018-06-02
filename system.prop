@@ -109,7 +109,7 @@ ro.telephony.call_ring.multiple=false
 telephony.lteOnCdmaDevice=0
 
 # SDcardFS
-ro.sys.sdcardfs=false
+ro.sys.sdcardfs=true
 
 # Time
 persist.timed.enable=true
