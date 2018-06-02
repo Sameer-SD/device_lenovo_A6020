@@ -114,7 +114,7 @@ telephony.lteOnCdmaDevice=0
 persist.radio.aosp_usr_pref_sel=true
 
 # SDcardFS
-ro.sys.sdcardfs=false
+ro.sys.sdcardfs=true
 
 # Time
 persist.timed.enable=true
