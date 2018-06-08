@@ -539,7 +539,7 @@ service perfd /system/vendor/bin/perfd
    disabled
    writepid /dev/cpuset/system-background/tasks
 
-service qcom-post-boot /system/vendor/bin/init.qcom.post_boot.sh
+service qcom-post-boot /system/bin/sh /system/etc/init.qcom.post_boot.sh
     class late_start
     user root
     disabled
