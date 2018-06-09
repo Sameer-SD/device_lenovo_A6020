@@ -120,6 +120,9 @@ ro.sys.sdcardfs=false
 # Time
 persist.timed.enable=true
 
+#Trim
+ro.vendor.qti.sys.fw.use_trim_settings=true
+
 # WiFi
 wifi.interface=wlan0
 
