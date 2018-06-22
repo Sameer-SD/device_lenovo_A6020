@@ -114,6 +114,9 @@ ro.sys.sdcardfs=true
 # Time
 persist.timed.enable=true
 
+# UI
+sys.use_fifo_ui=1
+
 # WiFi
 wifi.interface=wlan0
 
@@ -122,3 +125,4 @@ persist.dbg.wfc_avail_ovr=1
 
 # WiFi Display
 persist.debug.wfd.enable=1
+
