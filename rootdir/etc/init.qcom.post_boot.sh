@@ -128,7 +128,11 @@ case "$target" in
             echo 68 > /sys/devices/system/cpu/cpu0/core_ctl/busy_up_thres   
             echo 40 > /sys/devices/system/cpu/cpu0/core_ctl/busy_down_thres   
             echo 100 > /sys/devices/system/cpu/cpu0/core_ctl/offline_delay_ms    
-            echo 1 >/sys/devices/system/cpu/cpu0/core_ctl/is_big_cluster  
+            echo 1 >/sys/devices/system/cpu/cpu0/core_ctl/is_big_cluster
+            echo 20 > /sys/devices/system/cpu/cpu4/core_ctl/busy_up_thres
+            echo 5 > /sys/devices/system/cpu/cpu4/core_ctl/busy_down_thres
+            echo 5000 > /sys/devices/system/cpu/cpu4/core_ctl/offline_delay_ms
+            echo 1 > /sys/devices/system/cpu/cpu4/core_ctl/not_preferred
 
             # cpu idle load threshold
             echo 30 > /sys/devices/system/cpu/cpu0/sched_mostly_idle_load
@@ -236,13 +240,17 @@ case "$target" in
             echo 93 > /proc/sys/kernel/sched_upmigrate
             echo 83 > /proc/sys/kernel/sched_downmigrate
 
-	    # Enable core control
-	    echo 2 > /sys/devices/system/cpu/cpu0/core_ctl/min_cpus
-	    echo 4 > /sys/devices/system/cpu/cpu0/core_ctl/max_cpus
-	    echo 68 > /sys/devices/system/cpu/cpu0/core_ctl/busy_up_thres
-	    echo 40 > /sys/devices/system/cpu/cpu0/core_ctl/busy_down_thres
-	    echo 100 > /sys/devices/system/cpu/cpu0/core_ctl/offline_delay_ms
-	    echo 1 >/sys/devices/system/cpu/cpu0/core_ctl/is_big_cluster
+            # Enable core control
+            echo 2 > /sys/devices/system/cpu/cpu0/core_ctl/min_cpus
+            echo 4 > /sys/devices/system/cpu/cpu0/core_ctl/max_cpus
+            echo 68 > /sys/devices/system/cpu/cpu0/core_ctl/busy_up_thres
+            echo 40 > /sys/devices/system/cpu/cpu0/core_ctl/busy_down_thres
+            echo 100 > /sys/devices/system/cpu/cpu0/core_ctl/offline_delay_ms
+            echo 1 >/sys/devices/system/cpu/cpu0/core_ctl/is_big_cluster
+            echo 20 > /sys/devices/system/cpu/cpu4/core_ctl/busy_up_thres
+            echo 5 > /sys/devices/system/cpu/cpu4/core_ctl/busy_down_thres
+            echo 5000 > /sys/devices/system/cpu/cpu4/core_ctl/offline_delay_ms
+            echo 1 > /sys/devices/system/cpu/cpu4/core_ctl/not_preferred
 
             # Enable sched guided freq control
             echo 1 > /sys/devices/system/cpu/cpu0/cpufreq/interactive/use_sched_load
