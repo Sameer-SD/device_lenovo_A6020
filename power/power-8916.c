@@ -48,11 +48,50 @@
 #include "performance.h"
 #include "power-common.h"
 
-static int saved_interactive_mode = -1;
-static int display_hint_sent;
-static int video_encode_hint_sent;
+#define MIN_FREQ_CPU0_DISP_OFF 400000
+#define MIN_FREQ_CPU0_DISP_ON  960000
 
-static void process_video_encode_hint(void *metadata);
+char scaling_min_freq[4][80] ={
+    "sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq",
+    "sys/devices/system/cpu/cpu1/cpufreq/scaling_min_freq",
+    "sys/devices/system/cpu/cpu2/cpufreq/scaling_min_freq",
+    "sys/devices/system/cpu/cpu3/cpufreq/scaling_min_freq"
+};
+
+static int saved_dcvs_cpu0_slack_max = -1;
+static int saved_dcvs_cpu0_slack_min = -1;
+static int saved_mpdecision_slack_max = -1;
+static int saved_mpdecision_slack_min = -1;
+static int saved_interactive_mode = -1;
+static int slack_node_rw_failed = 0;
+static int display_hint_sent;
+int display_boost;
+
+static int is_target_8916() /* Returns value=8916 if target is 8916 else value 0 */
+{
+    int fd;
+    int is_target_8916=0;
+    char buf[10] = {0};
+
+    fd = open("/sys/devices/soc0/soc_id", O_RDONLY);
+    if (fd >= 0) {
+        if (read(fd, buf, sizeof(buf) - 1) == -1) {
+            ALOGW("Unable to read soc_id");
+            is_target_8916 = 0;
+        } else {
+            int soc_id = atoi(buf);
+            if (soc_id == 206 || (soc_id >= 247 && soc_id <= 250))  {
+            is_target_8916 = 8916; /* Above SOCID for 8916 */
+            }
+        }
+    }
+    close(fd);
+    return is_target_8916;
+}
+
+/* Declare function before use */
+void interaction(int duration, int num_args, int opt_list[]);
+
 
 int  power_hint_override(struct power_module *module, power_hint_t hint,
         void *data)
@@ -60,14 +99,23 @@ int  power_hint_override(struct power_module *module, power_hint_t hint,
 
     switch(hint) {
         case POWER_HINT_VSYNC:
-            break;
-        case POWER_HINT_VIDEO_ENCODE:
+        break;
+        case POWER_HINT_INTERACTION:
         {
-            process_video_encode_hint(data);
-            return HINT_HANDLED;
+            int resources[] = {0x702, 0x20F, 0x30F};
+            int duration = 3000;
+
+            interaction(duration, sizeof(resources)/sizeof(resources[0]), resources);
         }
+            return HINT_HANDLED;
+        case POWER_HINT_VIDEO_ENCODE: /* Do nothing for encode case  */
+            return HINT_HANDLED;
+        case POWER_HINT_VIDEO_DECODE: /*Do nothing for encode case  */
+            return HINT_HANDLED;
+        default:
+            return HINT_HANDLED;
     }
-    return HINT_NONE;
+return HINT_NONE;
 }
 
 int  set_interactive_override(struct power_module *module, int on)
@@ -78,7 +126,6 @@ int  set_interactive_override(struct power_module *module, int on)
     int rc;
 
     ALOGI("Got set_interactive hint");
-
     if (get_scaling_governor_check_cores(governor, sizeof(governor),CPU0) == -1) {
         if (get_scaling_governor_check_cores(governor, sizeof(governor),CPU1) == -1) {
             if (get_scaling_governor_check_cores(governor, sizeof(governor),CPU2) == -1) {
@@ -92,105 +139,96 @@ int  set_interactive_override(struct power_module *module, int on)
 
     if (!on) {
         /* Display off. */
+       switch(is_target_8916()) {
+
+          case 8916:
+           {
+            if ((strncmp(governor, INTERACTIVE_GOVERNOR, strlen(INTERACTIVE_GOVERNOR)) == 0) &&
+                (strlen(governor) == strlen(INTERACTIVE_GOVERNOR))) {
+               int resource_values[] = {TR_MS_50, THREAD_MIGRATION_SYNC_OFF};
+
+                  if (!display_hint_sent) {
+                      perform_hint_action(DISPLAY_STATE_HINT_ID,
+                      resource_values, sizeof(resource_values)/sizeof(resource_values[0]));
+                      display_hint_sent = 1;
+                  }
+            } /* Perf time rate set for 8916 target*/
+           } /* End of Switch case for 8916 */
+            break ;
+
+            default:
+            {
              if ((strncmp(governor, INTERACTIVE_GOVERNOR, strlen(INTERACTIVE_GOVERNOR)) == 0) &&
                 (strlen(governor) == strlen(INTERACTIVE_GOVERNOR))) {
-               int resource_values[] = {INT_OP_CLUSTER0_TIMER_RATE, BIG_LITTLE_TR_MS_50,
-                                        INT_OP_CLUSTER1_TIMER_RATE, BIG_LITTLE_TR_MS_50,
-                                        INT_OP_NOTIFY_ON_MIGRATE, 0x00};
+               int resource_values[] = {TR_MS_CPU0_50,TR_MS_CPU4_50, THREAD_MIGRATION_SYNC_OFF};
 
-               if (!display_hint_sent) {
-                   perform_hint_action(DISPLAY_STATE_HINT_ID,
-                   resource_values, sizeof(resource_values)/sizeof(resource_values[0]));
-                  display_hint_sent = 1;
+               /* Set CPU0 MIN FREQ to 400Mhz avoid extra peak power
+                  impact in volume key press  */
+               snprintf(tmp_str, NODE_MAX, "%d", MIN_FREQ_CPU0_DISP_OFF);
+               if (sysfs_write(scaling_min_freq[0], tmp_str) != 0) {
+                   if (sysfs_write(scaling_min_freq[1], tmp_str) != 0) {
+                       if (sysfs_write(scaling_min_freq[2], tmp_str) != 0) {
+                           if (sysfs_write(scaling_min_freq[3], tmp_str) != 0) {
+                               if(!slack_node_rw_failed) {
+                                  ALOGE("Failed to write to %s",SCALING_MIN_FREQ );
+                               }
+                                rc = 1;
+                           }
+                       }
+                   }
                 }
-             } /* Perf time rate set for CORE0,CORE4 8952 target*/
+
+                  if (!display_hint_sent) {
+                      perform_hint_action(DISPLAY_STATE_HINT_ID,
+                      resource_values, sizeof(resource_values)/sizeof(resource_values[0]));
+                      display_hint_sent = 1;
+                  }
+             } /* Perf time rate set for CORE0,CORE4 8939 target*/
+           }/* End of Switch case for 8939 */
+           break ;
+          }
 
     } else {
         /* Display on. */
+      switch(is_target_8916()){
+         case 8916:
+         {
+          if ((strncmp(governor, INTERACTIVE_GOVERNOR, strlen(INTERACTIVE_GOVERNOR)) == 0) &&
+                (strlen(governor) == strlen(INTERACTIVE_GOVERNOR))) {
+            undo_hint_action(DISPLAY_STATE_HINT_ID);
+            display_hint_sent = 0;
+         }
+         }
+         break ;
+         default :
+         {
+
           if ((strncmp(governor, INTERACTIVE_GOVERNOR, strlen(INTERACTIVE_GOVERNOR)) == 0) &&
                 (strlen(governor) == strlen(INTERACTIVE_GOVERNOR))) {
 
+              /* Recovering MIN_FREQ in display ON case */
+               snprintf(tmp_str, NODE_MAX, "%d", MIN_FREQ_CPU0_DISP_ON);
+               if (sysfs_write(scaling_min_freq[0], tmp_str) != 0) {
+                   if (sysfs_write(scaling_min_freq[1], tmp_str) != 0) {
+                       if (sysfs_write(scaling_min_freq[2], tmp_str) != 0) {
+                           if (sysfs_write(scaling_min_freq[3], tmp_str) != 0) {
+                               if(!slack_node_rw_failed) {
+                                  ALOGE("Failed to write to %s",SCALING_MIN_FREQ );
+                               }
+                                rc = 1;
+                           }
+                       }
+                   }
+                }
              undo_hint_action(DISPLAY_STATE_HINT_ID);
              display_hint_sent = 0;
           }
+
+        }
+         break ;
+      } /* End of check condition during the DISPLAY ON case */
    }
     saved_interactive_mode = !!on;
     return HINT_HANDLED;
 }
-
-/* Video Encode Hint */
-static void process_video_encode_hint(void *metadata)
-{
-    char governor[80];
-    struct video_encode_metadata_t video_encode_metadata;
-
-    ALOGI("Got process_video_encode_hint");
-
-    if (get_scaling_governor_check_cores(governor,
-        sizeof(governor),CPU0) == -1) {
-            if (get_scaling_governor_check_cores(governor,
-                sizeof(governor),CPU1) == -1) {
-                    if (get_scaling_governor_check_cores(governor,
-                        sizeof(governor),CPU2) == -1) {
-                            if (get_scaling_governor_check_cores(governor,
-                                sizeof(governor),CPU3) == -1) {
-                                    ALOGE("Can't obtain scaling governor.");
-                                    return;
-                            }
-                    }
-            }
-    }
-
-    /* Initialize encode metadata struct fields. */
-    memset(&video_encode_metadata, 0, sizeof(struct video_encode_metadata_t));
-    video_encode_metadata.state = -1;
-    video_encode_metadata.hint_id = DEFAULT_VIDEO_ENCODE_HINT_ID;
-
-    if (metadata) {
-        if (parse_video_encode_metadata((char *)metadata,
-            &video_encode_metadata) == -1) {
-            ALOGE("Error occurred while parsing metadata.");
-            return;
-        }
-    } else {
-        return;
-    }
-
-    if (video_encode_metadata.state == 1) {
-        if ((strncmp(governor, INTERACTIVE_GOVERNOR,
-            strlen(INTERACTIVE_GOVERNOR)) == 0) &&
-            (strlen(governor) == strlen(INTERACTIVE_GOVERNOR))) {
-            /* Sched_load and migration_notif*/
-            int resource_values[] = {INT_OP_CLUSTER0_USE_SCHED_LOAD,
-                                     0x1,
-                                     INT_OP_CLUSTER1_USE_SCHED_LOAD,
-                                     0x1,
-                                     INT_OP_CLUSTER0_USE_MIGRATION_NOTIF,
-                                     0x1,
-                                     INT_OP_CLUSTER1_USE_MIGRATION_NOTIF,
-                                     0x1,
-                                     INT_OP_CLUSTER0_TIMER_RATE,
-                                     BIG_LITTLE_TR_MS_40,
-                                     INT_OP_CLUSTER1_TIMER_RATE,
-                                     BIG_LITTLE_TR_MS_40
-                                     };
-            if (!video_encode_hint_sent) {
-                perform_hint_action(video_encode_metadata.hint_id,
-                resource_values,
-                sizeof(resource_values)/sizeof(resource_values[0]));
-                video_encode_hint_sent = 1;
-            }
-        }
-    } else if (video_encode_metadata.state == 0) {
-        if ((strncmp(governor, INTERACTIVE_GOVERNOR,
-            strlen(INTERACTIVE_GOVERNOR)) == 0) &&
-            (strlen(governor) == strlen(INTERACTIVE_GOVERNOR))) {
-            undo_hint_action(video_encode_metadata.hint_id);
-            video_encode_hint_sent = 0;
-            return ;
-        }
-    }
-    return;
-}
-
 
