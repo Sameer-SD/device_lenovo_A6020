@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -57,11 +57,8 @@ static int slack_node_rw_failed = 0;
 static int display_hint_sent;
 int display_boost;
 
-static int power_device_open(const hw_module_t* module, const char* name,
-        hw_device_t** device);
-
 static struct hw_module_methods_t power_module_methods = {
-    .open = power_device_open,
+    .open = NULL,
 };
 
 static void power_init(struct power_module *module)
@@ -212,12 +209,6 @@ static void power_hint(struct power_module *module, power_hint_t hint,
     switch(hint) {
         case POWER_HINT_VSYNC:
         break;
-        case POWER_HINT_SUSTAINED_PERFORMANCE:
-            ALOGI("Sustained perf power hint not handled in power_hint_override");
-            break;
-        case POWER_HINT_VR_MODE:
-            ALOGI("VR mode power hint not handled in power_hint_override");
-            break;
         case POWER_HINT_INTERACTION:
         {
             int resources[] = {0x702, 0x20F, 0x30F};
@@ -245,15 +236,7 @@ void set_interactive(struct power_module *module, int on)
     char governor[80];
     char tmp_str[NODE_MAX];
     struct video_encode_metadata_t video_encode_metadata;
-    int rc = 0;
-
-    if (!on) {
-        /* Send Display OFF hint to perf HAL */
-        perf_hint_enable(VENDOR_HINT_DISPLAY_OFF, 0);
-    } else {
-        /* Send Display ON hint to perf HAL */
-        perf_hint_enable(VENDOR_HINT_DISPLAY_ON, 0);
-    }
+    int rc;
 
     if (set_interactive_override(module, on) == HINT_HANDLED) {
         return;
@@ -451,44 +434,6 @@ void set_interactive(struct power_module *module, int on)
     }
 
     saved_interactive_mode = !!on;
-}
-
-static int power_device_open(const hw_module_t* module, const char* name,
-        hw_device_t** device)
-{
-    int status = -EINVAL;
-    if (module && name && device) {
-        if (!strcmp(name, POWER_HARDWARE_MODULE_ID)) {
-            power_module_t *dev = (power_module_t *)malloc(sizeof(*dev));
-
-            if(dev) {
-                memset(dev, 0, sizeof(*dev));
-
-                if(dev) {
-                    /* initialize the fields */
-                    dev->common.module_api_version = POWER_MODULE_API_VERSION_0_2;
-                    dev->common.tag = HARDWARE_DEVICE_TAG;
-                    dev->init = power_init;
-                    dev->powerHint = power_hint;
-                    dev->setInteractive = set_interactive;
-                    /* At the moment we support 0.2 APIs */
-                    dev->setFeature = NULL,
-                        dev->get_number_of_platform_modes = NULL,
-                        dev->get_platform_low_power_stats = NULL,
-                        dev->get_voter_list = NULL,
-                        *device = (hw_device_t*)dev;
-                    status = 0;
-                } else {
-                    status = -ENOMEM;
-                }
-            }
-            else {
-                status = -ENOMEM;
-            }
-        }
-    }
-
-    return status;
 }
 
 struct power_module HAL_MODULE_INFO_SYM = {
