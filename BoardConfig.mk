@@ -19,6 +19,11 @@
 # inherit from the proprietary version
 include vendor/lenovo/A6020/BoardConfigVendor.mk
 
+#treble
+BOARD_NEEDS_VENDORIMAGE_SYMLINK := false
+TARGET_COPY_OUT_VENDOR := vendor
+
+
 LOCAL_PATH := device/lenovo/A6020
 
 TARGET_SPECIFIC_HEADER_PATH := $(LOCAL_PATH)/include
